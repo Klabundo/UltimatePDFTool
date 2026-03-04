@@ -15,6 +15,7 @@ export default function App() {
   const [downloadFilename, setDownloadFilename] = useState('');
 
   // Form states
+  const [splitPages, setSplitPages] = useState([]);
   const [deletePages, setDeletePages] = useState([]);
   const [rotatePages, setRotatePages] = useState([]);
   const [rotateAngle, setRotateAngle] = useState(90);
@@ -35,6 +36,7 @@ export default function App() {
     setError(null);
     setDownloadUrl(null);
     setLoading(false);
+    setSplitPages([]);
     setDeletePages([]);
     setRotatePages([]);
     setReorderPages([]);
@@ -95,7 +97,11 @@ export default function App() {
     try {
       let endpoint = `${API_BASE_URL}/${activeTab}`;
 
-      if (activeTab === 'delete') {
+      if (activeTab === 'split') {
+        if (splitPages.length > 0) {
+            formData.append('pages', splitPages.join(' '));
+        }
+      } else if (activeTab === 'delete') {
         if(deletePages.length === 0) throw new Error("Please specify pages to delete.");
         formData.append('pages', deletePages.join(' '));
       } else if (activeTab === 'rotate') {
@@ -198,7 +204,7 @@ export default function App() {
               </h1>
               <p className="text-gray-500 mb-8">
                 {activeTab === 'merge' && 'Combine multiple PDFs into a single document.'}
-                {activeTab === 'split' && 'Extract every page of your PDF into separate files (downloaded as a ZIP).'}
+                {activeTab === 'split' && 'Select specific pages to extract, or extract every page of your PDF into separate files (downloaded as a ZIP).'}
                 {activeTab === 'delete' && 'Remove specific pages from your document.'}
                 {activeTab === 'rotate' && 'Rotate specific pages by 90, 180, or 270 degrees.'}
                 {activeTab === 'reorder' && 'Change the order of the pages in your PDF.'}
@@ -266,6 +272,12 @@ export default function App() {
 
                     {/* Operation Specific Forms */}
                     <div className="mb-8">
+                        {activeTab === 'split' && (
+                           <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Pages to Split (Leave empty to split all pages)</label>
+                              <PdfPreviewWrapper file={files[0]} selectedPages={splitPages} onSelect={setSplitPages} mode="split" />
+                           </div>
+                        )}
                         {activeTab === 'delete' && (
                            <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">Pages to Delete</label>
