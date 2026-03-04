@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Layers, FileOutput, Scissors, RotateCw, ListOrdered, FileUp, X, CheckCircle, FileText, Loader2, Download } from 'lucide-react';
 import axios from 'axios';
+import PdfPreviewWrapper from './PdfPreviewWrapper';
+
 
 const API_BASE_URL = 'http://localhost:8000/api';
 
@@ -13,10 +15,10 @@ export default function App() {
   const [downloadFilename, setDownloadFilename] = useState('');
 
   // Form states
-  const [deletePages, setDeletePages] = useState('');
-  const [rotatePages, setRotatePages] = useState('all');
+  const [deletePages, setDeletePages] = useState([]);
+  const [rotatePages, setRotatePages] = useState([]);
   const [rotateAngle, setRotateAngle] = useState(90);
-  const [reorderPages, setReorderPages] = useState('');
+  const [reorderPages, setReorderPages] = useState([]);
 
   const fileInputRef = useRef(null);
 
@@ -28,12 +30,14 @@ export default function App() {
     { id: 'reorder', label: 'Reorder Pages', icon: ListOrdered },
   ];
 
-  // Reset state when switching tabs
   useEffect(() => {
     setFiles([]);
     setError(null);
     setDownloadUrl(null);
     setLoading(false);
+    setDeletePages([]);
+    setRotatePages([]);
+    setReorderPages([]);
   }, [activeTab]);
 
   const handleFileChange = (e) => {
@@ -92,15 +96,15 @@ export default function App() {
       let endpoint = `${API_BASE_URL}/${activeTab}`;
 
       if (activeTab === 'delete') {
-        if(!deletePages) throw new Error("Please specify pages to delete.");
-        formData.append('pages', deletePages);
+        if(deletePages.length === 0) throw new Error("Please specify pages to delete.");
+        formData.append('pages', deletePages.join(' '));
       } else if (activeTab === 'rotate') {
-        if(!rotatePages) throw new Error("Please specify pages to rotate.");
-        formData.append('pages', rotatePages);
+        if(rotatePages.length === 0) throw new Error("Please specify pages to rotate.");
+        formData.append('pages', rotatePages.join(' '));
         formData.append('angle', rotateAngle);
       } else if (activeTab === 'reorder') {
-        if(!reorderPages) throw new Error("Please specify new order.");
-        formData.append('order', reorderPages);
+        if(reorderPages.length === 0) throw new Error("Please specify new order.");
+        formData.append('order', reorderPages.join(' '));
       }
 
       const response = await axios.post(endpoint, formData, {
@@ -265,16 +269,11 @@ export default function App() {
                         {activeTab === 'delete' && (
                            <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">Pages to Delete</label>
-                              <input type="text" value={deletePages} onChange={e => setDeletePages(e.target.value)} placeholder="e.g. 1 3 5" className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
-                              <p className="text-xs text-gray-500 mt-1">Space separated 1-based page numbers.</p>
+                              <PdfPreviewWrapper file={files[0]} selectedPages={deletePages} onSelect={setDeletePages} mode="delete" />
                            </div>
                         )}
                         {activeTab === 'rotate' && (
-                           <div className="flex gap-4">
-                              <div className="flex-1">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Pages to Rotate</label>
-                                <input type="text" value={rotatePages} onChange={e => setRotatePages(e.target.value)} placeholder="e.g. 1 3 or all" className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
-                              </div>
+                           <div className="flex flex-col gap-4">
                               <div className="w-32">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Angle</label>
                                 <select value={rotateAngle} onChange={e => setRotateAngle(Number(e.target.value))} className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
@@ -283,13 +282,16 @@ export default function App() {
                                     <option value={270}>270°</option>
                                 </select>
                               </div>
+                              <div className="flex-1">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Pages to Rotate</label>
+                                <PdfPreviewWrapper file={files[0]} selectedPages={rotatePages} onSelect={setRotatePages} mode="rotate" />
+                              </div>
                            </div>
                         )}
                         {activeTab === 'reorder' && (
                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">New Order</label>
-                              <input type="text" value={reorderPages} onChange={e => setReorderPages(e.target.value)} placeholder="e.g. 3 1 2" className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
-                              <p className="text-xs text-gray-500 mt-1">Space separated sequence of 1-based page numbers.</p>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">New Order (Click pages in order)</label>
+                              <PdfPreviewWrapper file={files[0]} selectedPages={reorderPages} onSelect={setReorderPages} mode="reorder" />
                            </div>
                         )}
                     </div>
