@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Layers, FileOutput, Scissors, RotateCw, ListOrdered, FileUp, X, CheckCircle, FileText, Loader2, Download } from 'lucide-react';
+import { Layers, FileOutput, Scissors, RotateCw, ListOrdered, FileUp, X, CheckCircle, FileText, Loader2, Download, GripVertical } from 'lucide-react';
 import axios from 'axios';
 import PdfPreviewWrapper from './PdfPreviewWrapper';
+import FileThumbnail from './FileThumbnail';
 
 
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -68,6 +69,29 @@ export default function App() {
 
   const removeFile = (index) => {
     setFiles(files.filter((_, i) => i !== index));
+  };
+
+  const handleDragStartFile = (e, index) => {
+    if (activeTab !== 'merge') return;
+    e.dataTransfer.setData('text/plain', index);
+  };
+
+  const handleDragOverFile = (e) => {
+    if (activeTab !== 'merge') return;
+    e.preventDefault();
+  };
+
+  const handleDropFile = (e, targetIndex) => {
+    if (activeTab !== 'merge') return;
+    e.preventDefault();
+    const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
+    if (draggedIndex === targetIndex) return;
+
+    const newFiles = [...files];
+    const [draggedItem] = newFiles.splice(draggedIndex, 1);
+    newFiles.splice(targetIndex, 0, draggedItem);
+
+    setFiles(newFiles);
   };
 
   const handleSubmit = async () => {
@@ -141,7 +165,7 @@ export default function App() {
           try {
              const json = JSON.parse(text);
              setError(json.detail || "Server error occurred");
-          } catch(e) {
+          } catch {
              setError("An error occurred processing your request.");
           }
        } else {
@@ -257,14 +281,24 @@ export default function App() {
 
                     <div className="space-y-3 mb-8">
                         {files.map((file, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
-                                <div className="flex items-center gap-3 overflow-hidden">
-                                    <FileText className="text-red-500 h-5 w-5 shrink-0" />
-                                    <span className="truncate text-sm font-medium text-gray-700">{file.name}</span>
-                                    <span className="text-xs text-gray-400">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                            <div
+                              key={idx}
+                              draggable={activeTab === 'merge'}
+                              onDragStart={(e) => handleDragStartFile(e, idx)}
+                              onDragOver={handleDragOverFile}
+                              onDrop={(e) => handleDropFile(e, idx)}
+                              className={`flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white shadow-sm transition-shadow hover:shadow-md ${activeTab === 'merge' ? 'cursor-move' : ''}`}
+                            >
+                                <div className="flex items-center gap-4 overflow-hidden">
+                                    {activeTab === 'merge' && <GripVertical className="h-5 w-5 text-gray-400 shrink-0" />}
+                                    <FileThumbnail file={file} />
+                                    <div className="flex flex-col">
+                                      <span className="truncate text-sm font-medium text-gray-700">{file.name}</span>
+                                      <span className="text-xs text-gray-400">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                                    </div>
                                 </div>
-                                <button onClick={() => removeFile(idx)} className="p-1 hover:bg-gray-200 rounded text-gray-500 hover:text-red-500 transition-colors">
-                                    <X className="h-4 w-4" />
+                                <button onClick={() => removeFile(idx)} className="p-1 hover:bg-gray-100 rounded text-gray-500 hover:text-red-500 transition-colors ml-2">
+                                    <X className="h-5 w-5" />
                                 </button>
                             </div>
                         ))}
@@ -274,6 +308,8 @@ export default function App() {
                     <div className="mb-8">
                         {activeTab === 'split' && (
                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Preview</label>
+                              <PdfPreviewWrapper file={files[0]} selectedPages={[]} onSelect={() => {}} mode="split" />
                               <label className="block text-sm font-medium text-gray-700 mb-1">Pages to Split (Leave empty to split all pages)</label>
                               <PdfPreviewWrapper file={files[0]} selectedPages={splitPages} onSelect={setSplitPages} mode="split" />
                            </div>
@@ -302,6 +338,7 @@ export default function App() {
                         )}
                         {activeTab === 'reorder' && (
                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">New Order (Drag pages to reorder)</label>
                               <label className="block text-sm font-medium text-gray-700 mb-1">New Order (Drag and drop pages to reorder)</label>
                               <PdfPreviewWrapper file={files[0]} selectedPages={reorderPages} onSelect={setReorderPages} mode="reorder" />
                            </div>
