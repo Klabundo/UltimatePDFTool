@@ -16,8 +16,7 @@ def merge(args):
             writer.write(f_out)
         print(f"Successfully merged into {args.output}")
     except Exception as e:
-        print(f"Error during merge: {e}")
-        sys.exit(1)
+        raise RuntimeError(f"Error during merge: {e}")
 
 def split(args):
     print(f"Splitting {args.input} into directory: {args.output_dir}...")
@@ -38,15 +37,13 @@ def split(args):
 
         print(f"Successfully split into {len(reader.pages)} files in {args.output_dir}")
     except Exception as e:
-        print(f"Error during split: {e}")
-        sys.exit(1)
+        raise RuntimeError(f"Error during split: {e}")
 
 def delete(args):
     try:
         pages_to_delete = [int(p) - 1 for p in args.pages]
     except ValueError:
-        print("Error: Page numbers must be integers.")
-        sys.exit(1)
+        raise ValueError("Error: Page numbers must be integers.")
 
     print(f"Deleting {len(pages_to_delete)} pages from {args.input}...")
     try:
@@ -62,8 +59,7 @@ def delete(args):
             writer.write(f_out)
         print(f"Successfully deleted pages and saved to {args.output}")
     except Exception as e:
-        print(f"Error during delete: {e}")
-        sys.exit(1)
+        raise RuntimeError(f"Error during delete: {e}")
 
 
 def rotate(args):
@@ -73,8 +69,7 @@ def rotate(args):
         else:
             pages_to_rotate = [int(p) - 1 for p in args.pages]
     except ValueError:
-        print("Error: Page numbers must be integers or 'all'.")
-        sys.exit(1)
+        raise ValueError("Error: Page numbers must be integers or 'all'.")
 
     print(f"Rotating pages by {args.angle} degrees in {args.input}...")
     try:
@@ -90,16 +85,14 @@ def rotate(args):
             writer.write(f_out)
         print(f"Successfully rotated pages and saved to {args.output}")
     except Exception as e:
-        print(f"Error during rotate: {e}")
-        sys.exit(1)
+        raise RuntimeError(f"Error during rotate: {e}")
 
 def reorder(args):
     try:
         # Order inputs are 1-based, we need 0-based for pypdf
         new_order = [int(p) - 1 for p in args.order]
     except ValueError:
-        print("Error: Reorder sequence must be integers.")
-        sys.exit(1)
+        raise ValueError("Error: Reorder sequence must be integers.")
 
     print(f"Reordering pages in {args.input}...")
     try:
@@ -109,16 +102,14 @@ def reorder(args):
         num_pages = len(reader.pages)
         for p in new_order:
             if p < 0 or p >= num_pages:
-                print(f"Error: Page number {p + 1} is out of bounds (1-{num_pages}).")
-                sys.exit(1)
+                raise ValueError(f"Error: Page number {p + 1} is out of bounds (1-{num_pages}).")
             writer.add_page(reader.pages[p])
 
         with open(args.output, "wb") as f_out:
             writer.write(f_out)
         print(f"Successfully reordered pages and saved to {args.output}")
     except Exception as e:
-        print(f"Error during reorder: {e}")
-        sys.exit(1)
+        raise RuntimeError(f"Error during reorder: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description="The Ultimate PDF Tool for merging, splitting, modifying and more.")
@@ -159,7 +150,11 @@ def main():
     parser_reorder.set_defaults(func=reorder)
 
     args = parser.parse_args()
-    args.func(args)
+    try:
+        args.func(args)
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

@@ -12,7 +12,15 @@ Ein leistungsstarkes und einfaches Kommandozeilen-Tool zur Bearbeitung von PDF-D
 
 ## Nutzung
 
-Die grundlegende Syntax lautet:
+### Grafische Benutzeroberfläche (GUI)
+Wenn du eine einfache grafische Oberfläche mit Tabs und Dateiauswahl möchtest, kannst du das GUI-Tool starten:
+```bash
+python gui.py
+```
+Dies öffnet ein Fenster, in dem du "Merge", "Split", "Delete", "Rotate" und "Reorder" bequem per Mausklick bedienen kannst.
+
+### Kommandozeile (CLI)
+Du kannst das Tool auch komplett über die Kommandozeile steuern. Die grundlegende Syntax lautet:
 ```bash
 python pdf_tool.py [BEFEHL] [OPTIONEN]
 ```
