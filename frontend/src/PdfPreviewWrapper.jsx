@@ -35,9 +35,14 @@ export default function PdfPreview({ file, selectedPages, onSelect, mode }) {
 
   function onDocumentLoadSuccess({ numPages }) {
     setNumPages(numPages);
+    if (mode === 'reorder') {
+       onSelect(Array.from({length: numPages}, (_, i) => i + 1));
+    }
   }
 
   const handleSelect = (pageNumber) => {
+    if (mode === 'reorder') return; // Selection by click is disabled in reorder mode
+
     let newSelection;
     if (selectedPages.includes(pageNumber)) {
         newSelection = selectedPages.filter(p => p !== pageNumber);
@@ -83,7 +88,7 @@ export default function PdfPreview({ file, selectedPages, onSelect, mode }) {
     <div className="mt-4 w-full">
       <div className="flex justify-between items-center mb-2">
         <h4 className="text-sm font-medium text-gray-700">Preview & Select Pages</h4>
-        {numPages && (
+        {numPages && mode !== 'reorder' && (
             <div className="space-x-2">
                 <button
                   onClick={() => onSelect(Array.from({length: numPages}, (_, i) => i + 1))}
