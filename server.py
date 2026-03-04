@@ -58,7 +58,11 @@ async def api_merge(background_tasks: BackgroundTasks, files: List[UploadFile] =
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/split")
-async def api_split(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+async def api_split(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    pages: Optional[str] = Form(None) # Space separated e.g. "1 3"
+):
     temp_dir = tempfile.mkdtemp()
     background_tasks.add_task(cleanup_temp_dir, temp_dir)
 
@@ -68,7 +72,8 @@ async def api_split(background_tasks: BackgroundTasks, file: UploadFile = File(.
             shutil.copyfileobj(file.file, f)
 
         split_dir = os.path.join(temp_dir, "splits")
-        args = MockArgs(input=input_path, output_dir=split_dir)
+        pages_list = pages.strip().split() if pages else []
+        args = MockArgs(input=input_path, output_dir=split_dir, pages=pages_list)
 
         split(args)
 

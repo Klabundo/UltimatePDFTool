@@ -27,15 +27,26 @@ def split(args):
         reader = PdfReader(args.input)
         base_name = os.path.splitext(os.path.basename(args.input))[0]
 
+        if hasattr(args, 'pages') and args.pages:
+            try:
+                pages_to_split = [int(p) - 1 for p in args.pages]
+            except ValueError:
+                raise ValueError("Error: Page numbers must be integers.")
+        else:
+            pages_to_split = list(range(len(reader.pages)))
+
+        count = 0
         for i, page in enumerate(reader.pages):
-            writer = PdfWriter()
-            writer.add_page(page)
+            if i in pages_to_split:
+                writer = PdfWriter()
+                writer.add_page(page)
 
-            output_filename = os.path.join(args.output_dir, f"{base_name}_page_{i+1}.pdf")
-            with open(output_filename, "wb") as f_out:
-                writer.write(f_out)
+                output_filename = os.path.join(args.output_dir, f"{base_name}_page_{i+1}.pdf")
+                with open(output_filename, "wb") as f_out:
+                    writer.write(f_out)
+                count += 1
 
-        print(f"Successfully split into {len(reader.pages)} files in {args.output_dir}")
+        print(f"Successfully split into {count} files in {args.output_dir}")
     except Exception as e:
         raise RuntimeError(f"Error during split: {e}")
 
@@ -179,6 +190,7 @@ def main():
     parser_split = subparsers.add_parser("split", help="Split a PDF into single pages.")
     parser_split.add_argument("-i", "--input", required=True, help="Input PDF file.")
     parser_split.add_argument("-o", "--output-dir", required=True, help="Output directory for split pages.")
+    parser_split.add_argument("-p", "--pages", nargs='*', help="Optional list of 1-based page numbers to split.")
     parser_split.set_defaults(func=split)
 
     # Delete subcommand
