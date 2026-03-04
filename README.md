@@ -4,24 +4,26 @@ Ein leistungsstarkes und einfaches Kommandozeilen-Tool zur Bearbeitung von PDF-D
 
 ## Installation & Schnellstart
 
-1. Stelle sicher, dass **Python (>=3.8)** installiert ist.
-2. Klicke doppelt auf die Start-Datei für dein Betriebssystem (diese installiert automatisch fehlende Abhängigkeiten und öffnet die GUI):
+Dieses Tool verfügt über ein modernes Web-Frontend (mit React gebaut) und ein Python Backend (FastAPI).
+
+1. Stelle sicher, dass **Python (>=3.8)** und **Node.js (>=18)** installiert sind.
+2. Klicke doppelt auf die Start-Datei für dein Betriebssystem (diese installiert automatisch fehlende Abhängigkeiten und öffnet die Server):
    - **Windows:** Führe `start.bat` aus (z.B. per Doppelklick).
-   - **Linux/macOS:** Führe `./start.sh` im Terminal aus (oder klicke doppelt darauf, wenn dein System dies unterstützt).
+   - **Linux/macOS:** Führe `./start.sh` im Terminal aus.
 
-Alternativ kannst du das Tool auch manuell über die Kommandozeile bedienen:
+Sobald die Skripte laufen, öffnet sich dein Webbrowser mit der "Fancy" React-Benutzeroberfläche (standardmäßig unter `http://localhost:5173`), während die API im Hintergrund auf Port `8000` läuft.
 
-## Nutzung
-
-### Grafische Benutzeroberfläche (GUI) manuell starten
+### Alte Desktop-Oberfläche
+Falls du lieber die klassische Desktop-App nutzen möchtest:
 ```bash
 pip install -r requirements.txt
 python gui.py
 ```
-Dies öffnet ein Fenster, in dem du alle Funktionen ("Merge", "Split", "Delete", "Rotate" und "Reorder") bequem per Mausklick bedienen kannst.
+
+## Nutzung
 
 ### Kommandozeile (CLI)
-Du kannst das Tool auch komplett über die Kommandozeile steuern. Die grundlegende Syntax lautet:
+Du kannst das Tool weiterhin komplett über die Kommandozeile steuern. Die grundlegende Syntax lautet:
 ```bash
 python pdf_tool.py [BEFEHL] [OPTIONEN]
 ```
