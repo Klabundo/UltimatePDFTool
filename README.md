@@ -2,22 +2,23 @@
 
 Ein leistungsstarkes und einfaches Kommandozeilen-Tool zur Bearbeitung von PDF-Dateien. Dieses Tool ermöglicht es dir, PDFs ähnlich wie bei bekannten Online-Tools zu manipulieren, jedoch vollständig lokal und offline.
 
-## Installation
+## Installation & Schnellstart
 
-1. Stelle sicher, dass Python (>=3.8) installiert ist.
-2. Installiere die Abhängigkeiten mit `pip`:
-   ```bash
-   pip install -r requirements.txt
-   ```
+1. Stelle sicher, dass **Python (>=3.8)** installiert ist.
+2. Klicke doppelt auf die Start-Datei für dein Betriebssystem (diese installiert automatisch fehlende Abhängigkeiten und öffnet die GUI):
+   - **Windows:** Führe `start.bat` aus (z.B. per Doppelklick).
+   - **Linux/macOS:** Führe `./start.sh` im Terminal aus (oder klicke doppelt darauf, wenn dein System dies unterstützt).
+
+Alternativ kannst du das Tool auch manuell über die Kommandozeile bedienen:
 
 ## Nutzung
 
-### Grafische Benutzeroberfläche (GUI)
-Wenn du eine einfache grafische Oberfläche mit Tabs und Dateiauswahl möchtest, kannst du das GUI-Tool starten:
+### Grafische Benutzeroberfläche (GUI) manuell starten
 ```bash
+pip install -r requirements.txt
 python gui.py
 ```
-Dies öffnet ein Fenster, in dem du "Merge", "Split", "Delete", "Rotate" und "Reorder" bequem per Mausklick bedienen kannst.
+Dies öffnet ein Fenster, in dem du alle Funktionen ("Merge", "Split", "Delete", "Rotate" und "Reorder") bequem per Mausklick bedienen kannst.
 
 ### Kommandozeile (CLI)
 Du kannst das Tool auch komplett über die Kommandozeile steuern. Die grundlegende Syntax lautet:
