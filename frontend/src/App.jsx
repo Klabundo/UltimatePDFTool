@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Layers, FileOutput, Scissors, RotateCw, ListOrdered, FileUp, X, CheckCircle, FileText, Loader2, Download, Scan } from 'lucide-react';
 import { Layers, FileOutput, Scissors, RotateCw, ListOrdered, FileUp, X, CheckCircle, FileText, Loader2, Download, GripVertical } from 'lucide-react';
 import axios from 'axios';
 import PdfPreviewWrapper from './PdfPreviewWrapper';
@@ -21,6 +22,7 @@ export default function App() {
   const [rotatePages, setRotatePages] = useState([]);
   const [rotateAngle, setRotateAngle] = useState(90);
   const [reorderPages, setReorderPages] = useState([]);
+  const [deskewPages, setDeskewPages] = useState([]);
 
   const fileInputRef = useRef(null);
 
@@ -30,6 +32,7 @@ export default function App() {
     { id: 'delete', label: 'Delete Pages', icon: Scissors },
     { id: 'rotate', label: 'Rotate Pages', icon: RotateCw },
     { id: 'reorder', label: 'Reorder Pages', icon: ListOrdered },
+    { id: 'deskew', label: 'Deskew Pages', icon: Scan },
   ];
 
   useEffect(() => {
@@ -41,6 +44,7 @@ export default function App() {
     setDeletePages([]);
     setRotatePages([]);
     setReorderPages([]);
+    setDeskewPages([]);
   }, [activeTab]);
 
   const handleFileChange = (e) => {
@@ -135,6 +139,9 @@ export default function App() {
       } else if (activeTab === 'reorder') {
         if(reorderPages.length === 0) throw new Error("Please specify new order.");
         formData.append('order', reorderPages.join(' '));
+      } else if (activeTab === 'deskew') {
+        if(deskewPages.length === 0) throw new Error("Please specify pages to deskew.");
+        formData.append('pages', deskewPages.join(' '));
       }
 
       const response = await axios.post(endpoint, formData, {
@@ -232,6 +239,7 @@ export default function App() {
                 {activeTab === 'delete' && 'Remove specific pages from your document.'}
                 {activeTab === 'rotate' && 'Rotate specific pages by 90, 180, or 270 degrees.'}
                 {activeTab === 'reorder' && 'Change the order of the pages in your PDF.'}
+                {activeTab === 'deskew' && 'Automatically straighten skewed or crooked scanned pages.'}
               </p>
 
               {/* File Upload Area */}
@@ -343,6 +351,12 @@ export default function App() {
                               <PdfPreviewWrapper file={files[0]} selectedPages={reorderPages} onSelect={setReorderPages} mode="reorder" />
                            </div>
                         )}
+                        {activeTab === 'deskew' && (
+                           <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Pages to Deskew</label>
+                              <PdfPreviewWrapper file={files[0]} selectedPages={deskewPages} onSelect={setDeskewPages} mode="deskew" />
+                           </div>
+                        )}
                     </div>
 
                     {error && (
@@ -372,7 +386,7 @@ export default function App() {
                                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-8 py-3 rounded-lg font-medium transition-colors shadow-sm"
                             >
                                 {loading && <Loader2 className="h-5 w-5 animate-spin" />}
-                                {loading ? 'Processing...' : `Process PDF${activeTab === 'merge' ? 's' : ''}`}
+                                {loading ? (activeTab === 'deskew' ? 'Processing... (This may take a while)' : 'Processing...') : `Process PDF${activeTab === 'merge' ? 's' : ''}`}
                             </button>
                         </div>
                     )}

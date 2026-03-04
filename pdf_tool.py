@@ -98,6 +98,60 @@ def rotate(args):
     except Exception as e:
         raise RuntimeError(f"Error during rotate: {e}")
 
+def deskew(args):
+    try:
+        if "all" in args.pages:
+            pages_to_deskew = "all"
+        else:
+            pages_to_deskew = [int(p) - 1 for p in args.pages]
+    except ValueError:
+        raise ValueError("Error: Page numbers must be integers or 'all'.")
+
+    print(f"Deskewing pages in {args.input}...")
+    try:
+        import fitz
+        from deskew import determine_skew
+        from pypdf import Transformation
+
+        reader = PdfReader(args.input)
+        writer = PdfWriter()
+
+        # Open with PyMuPDF for rendering
+        doc = fitz.open(args.input)
+
+        for i, page in enumerate(reader.pages):
+            if pages_to_deskew == "all" or i in pages_to_deskew:
+                fitz_page = doc.load_page(i)
+                # Render to grayscale image
+                pix = fitz_page.get_pixmap(colorspace=fitz.csGRAY)
+                # Convert to numpy array
+                import numpy as np
+                img = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width)
+
+                # Determine skew angle
+                angle = determine_skew(img)
+                if angle is not None and abs(angle) > 0.1:
+                    print(f"Deskewing page {i + 1} by {angle:.2f} degrees")
+
+                    # We need to rotate the page.
+                    # We want to rotate around the center of the page.
+                    # calculate center of the page
+                    cx = float(page.mediabox.left) + float(page.mediabox.right - page.mediabox.left) / 2
+                    cy = float(page.mediabox.bottom) + float(page.mediabox.top - page.mediabox.bottom) / 2
+
+                    # PyPDF Transformation:
+                    # Translate center to origin, rotate, translate back
+                    op = Transformation().translate(-cx, -cy).rotate(angle).translate(cx, cy)
+                    page.add_transformation(op)
+
+            writer.add_page(page)
+
+        with open(args.output, "wb") as f_out:
+            writer.write(f_out)
+        print(f"Successfully deskewed pages and saved to {args.output}")
+    except Exception as e:
+        raise RuntimeError(f"Error during deskew: {e}")
+
 def reorder(args):
     try:
         # Order inputs are 1-based, we need 0-based for pypdf
@@ -160,6 +214,13 @@ def main():
     parser_reorder.add_argument("-o", "--output", required=True, help="Output PDF file.")
     parser_reorder.add_argument("-p", "--order", nargs='+', required=True, help="New order of 1-based page numbers (e.g., 3 1 2).")
     parser_reorder.set_defaults(func=reorder)
+
+    # Deskew subcommand
+    parser_deskew = subparsers.add_parser("deskew", help="Deskew pages in a PDF.")
+    parser_deskew.add_argument("-i", "--input", required=True, help="Input PDF file.")
+    parser_deskew.add_argument("-o", "--output", required=True, help="Output PDF file.")
+    parser_deskew.add_argument("-p", "--pages", nargs='+', required=True, help="List of 1-based page numbers to deskew. Use 'all' for all pages.")
+    parser_deskew.set_defaults(func=deskew)
 
     args = parser.parse_args()
     try:

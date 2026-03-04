@@ -8,7 +8,7 @@ import shutil
 import zipfile
 
 # Import underlying logic from our CLI tool
-from pdf_tool import merge, split, delete, rotate, reorder
+from pdf_tool import merge, split, delete, rotate, reorder, deskew
 
 app = FastAPI(title="Ultimate PDF Tool API")
 
@@ -161,6 +161,30 @@ async def api_reorder(
         reorder(args)
 
         return FileResponse(output_path, media_type="application/pdf", filename="reordered_output.pdf")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/deskew")
+async def api_deskew(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    pages: str = Form(...) # "all" or "1 2"
+):
+    temp_dir = tempfile.mkdtemp()
+    background_tasks.add_task(cleanup_temp_dir, temp_dir)
+
+    try:
+        input_path = os.path.join(temp_dir, file.filename)
+        with open(input_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        output_path = os.path.join(temp_dir, "deskewed_output.pdf")
+        pages_list = pages.strip().split()
+
+        args = MockArgs(input=input_path, output=output_path, pages=pages_list)
+        deskew(args)
+
+        return FileResponse(output_path, media_type="application/pdf", filename="deskewed_output.pdf")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
