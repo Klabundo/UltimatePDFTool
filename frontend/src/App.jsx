@@ -290,7 +290,7 @@ export default function App() {
                         )}
                         {activeTab === 'reorder' && (
                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">New Order (Click pages in order)</label>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">New Order (Drag and drop pages to reorder)</label>
                               <PdfPreviewWrapper file={files[0]} selectedPages={reorderPages} onSelect={setReorderPages} mode="reorder" />
                            </div>
                         )}
