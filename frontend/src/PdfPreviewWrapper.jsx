@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -13,6 +13,10 @@ export default function PdfPreview({ file, selectedPages, onSelect, mode }) {
 
   // Use a local URL for previewing the File object
   const [fileUrl, setFileUrl] = useState(null);
+
+  // Refs for drag and drop reordering
+  const dragItem = useRef(null);
+  const dragOverItem = useRef(null);
 
   useEffect(() => {
     let url = null;
@@ -82,7 +86,33 @@ export default function PdfPreview({ file, selectedPages, onSelect, mode }) {
     }
   }, [mode, numPages, selectedPages.length, onSelect]);
 
+  const handleSort = () => {
+    if (dragItem.current === null || dragOverItem.current === null) return;
+
+    let _selectedPages = [...selectedPages];
+    if (_selectedPages.length === 0 && numPages) {
+       _selectedPages = Array.from({length: numPages}, (_, i) => i + 1);
+    }
+
+    const draggedItemContent = _selectedPages.splice(dragItem.current, 1)[0];
+    _selectedPages.splice(dragOverItem.current, 0, draggedItemContent);
+
+    dragItem.current = null;
+    dragOverItem.current = null;
+
+    onSelect(_selectedPages);
+  };
+
   if (!fileUrl) return null;
+
+  let renderPages = [];
+  if (numPages) {
+      if (mode === 'reorder') {
+          renderPages = selectedPages.length === numPages ? selectedPages : Array.from({length: numPages}, (_, i) => i + 1);
+      } else {
+          renderPages = Array.from({length: numPages}, (_, i) => i + 1);
+      }
+  }
 
   return (
     <div className="mt-4 w-full">
@@ -121,6 +151,23 @@ export default function PdfPreview({ file, selectedPages, onSelect, mode }) {
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, index)}
                   className="relative cursor-move transition-all rounded-lg overflow-hidden border-4 border-blue-500 bg-white shadow-md flex flex-col scale-105"
+          {renderPages.map((pageNumber, index) => {
+             const isSelected = mode === 'reorder' ? false : selectedPages.includes(pageNumber);
+
+             return (
+                <div
+                  key={`page_${pageNumber}`}
+                  className={`relative transition-all rounded-lg overflow-hidden border-4 bg-white shadow-sm flex flex-col ${
+                    isSelected
+                      ? 'border-red-500 scale-105 shadow-md'
+                      : 'border-transparent hover:scale-105'
+                  } ${mode === 'reorder' ? 'cursor-move' : 'cursor-pointer'}`}
+                  onClick={() => handleSelect(pageNumber)}
+                  draggable={mode === 'reorder'}
+                  onDragStart={(e) => { if (mode === 'reorder') dragItem.current = index; }}
+                  onDragEnter={(e) => { if (mode === 'reorder') dragOverItem.current = index; }}
+                  onDragEnd={mode === 'reorder' ? handleSort : undefined}
+                  onDragOver={(e) => { if (mode === 'reorder') e.preventDefault(); }}
                 >
                   <Page
                     pageNumber={pageNumber}
@@ -140,6 +187,19 @@ export default function PdfPreview({ file, selectedPages, onSelect, mode }) {
                        <circle cx="15" cy="5" r="1"></circle>
                        <circle cx="15" cy="19" r="1"></circle>
                     </svg>
+                  {mode === 'reorder' && (
+                      <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow">
+                          {index + 1}
+                      </div>
+                  )}
+                  {mode !== 'reorder' && isSelected && (
+                      <div className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                      </div>
+                  )}
+                  <div className="bg-white text-center text-xs py-1 font-medium text-gray-600 border-t mt-auto w-full">
                     Page {pageNumber}
                   </div>
                 </div>
