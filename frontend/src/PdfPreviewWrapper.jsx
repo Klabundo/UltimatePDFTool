@@ -18,6 +18,9 @@ export default function PdfPreview({ file, selectedPages, onSelect, mode }) {
   const dragItem = useRef(null);
   const dragOverItem = useRef(null);
 
+  // State for multi-selection in reorder mode
+  const [selectedReorderPages, setSelectedReorderPages] = useState([]);
+
   useEffect(() => {
     let url = null;
     let isActive = true;
@@ -27,6 +30,7 @@ export default function PdfPreview({ file, selectedPages, onSelect, mode }) {
       if (isActive) {
         setFileUrl(url);
       }
+      setSelectedReorderPages([]); // Reset selection when file changes
     }
 
     return () => {
@@ -45,7 +49,16 @@ export default function PdfPreview({ file, selectedPages, onSelect, mode }) {
   }
 
   const handleSelect = (pageNumber) => {
-    if (mode === 'reorder') return; // Selection by click is disabled in reorder mode
+    if (mode === 'reorder') {
+        let newReorderSelection;
+        if (selectedReorderPages.includes(pageNumber)) {
+            newReorderSelection = selectedReorderPages.filter(p => p !== pageNumber);
+        } else {
+            newReorderSelection = [...selectedReorderPages, pageNumber];
+        }
+        setSelectedReorderPages(newReorderSelection);
+        return;
+    }
 
     let newSelection;
     if (selectedPages.includes(pageNumber)) {
@@ -58,7 +71,25 @@ export default function PdfPreview({ file, selectedPages, onSelect, mode }) {
 
   const handleDragStart = (e, index) => {
     if (mode !== 'reorder') return;
-    e.dataTransfer.setData('text/plain', index);
+
+    // Determine which pages are being dragged
+    const draggedPageNumber = selectedPages[index];
+    let pagesToDrag = [];
+
+    if (selectedReorderPages.includes(draggedPageNumber)) {
+        // Dragging a selected item, so drag all selected items
+        // Keep them in their current document order
+        pagesToDrag = selectedPages.filter(p => selectedReorderPages.includes(p));
+    } else {
+        // Dragging an unselected item. Treat it as single drag and make it the only selected item
+        pagesToDrag = [draggedPageNumber];
+        setSelectedReorderPages([draggedPageNumber]);
+    }
+
+    // Store the dragged pages array as JSON string
+    e.dataTransfer.setData('application/json', JSON.stringify(pagesToDrag));
+    // Set drop effect to move
+    e.dataTransfer.effectAllowed = 'move';
   };
 
   const handleDragOver = (e) => {
@@ -69,14 +100,35 @@ export default function PdfPreview({ file, selectedPages, onSelect, mode }) {
   const handleDrop = (e, targetIndex) => {
     if (mode !== 'reorder') return;
     e.preventDefault();
-    const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
-    if (draggedIndex === targetIndex) return;
 
-    const newOrder = [...selectedPages];
-    const [draggedItem] = newOrder.splice(draggedIndex, 1);
-    newOrder.splice(targetIndex, 0, draggedItem);
+    try {
+        const data = e.dataTransfer.getData('application/json');
+        if (!data) return;
 
-    onSelect(newOrder);
+        const draggedPages = JSON.parse(data);
+        if (!Array.isArray(draggedPages) || draggedPages.length === 0) return;
+
+        // Count how many dragged items come BEFORE the targetIndex in the CURRENT selectedPages array
+        // Because when we remove them, the targetIndex needs to shift left by that amount
+        let shift = 0;
+        for (let i = 0; i < targetIndex; i++) {
+            if (draggedPages.includes(selectedPages[i])) {
+                shift++;
+            }
+        }
+
+        const newTargetIndex = targetIndex - shift;
+
+        // Remove the dragged pages from the current order
+        let newOrder = selectedPages.filter(p => !draggedPages.includes(p));
+
+        // Insert the dragged pages at the adjusted target index
+        newOrder.splice(newTargetIndex, 0, ...draggedPages);
+
+        onSelect(newOrder);
+    } catch (err) {
+        console.error("Error parsing drag data", err);
+    }
   };
 
   // Initialize selected pages for reorder if empty
@@ -134,6 +186,16 @@ export default function PdfPreview({ file, selectedPages, onSelect, mode }) {
                 </button>
             </div>
         )}
+        {numPages && mode === 'reorder' && selectedReorderPages.length > 0 && (
+            <div className="space-x-2">
+                <button
+                  onClick={() => setSelectedReorderPages([])}
+                  className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded transition-colors cursor-pointer"
+                >
+                  Clear Selection
+                </button>
+            </div>
+        )}
       </div>
       <div className="bg-gray-100 p-4 rounded-lg overflow-auto max-h-96">
         <Document
@@ -143,18 +205,20 @@ export default function PdfPreview({ file, selectedPages, onSelect, mode }) {
           loading={<div className="text-sm text-gray-500">Loading PDF preview...</div>}
         >
           {renderPages.map((pageNumber, index) => {
-             const isSelected = mode === 'reorder' ? false : selectedPages.includes(pageNumber);
+             const isSelected = mode === 'reorder' ? selectedReorderPages.includes(pageNumber) : selectedPages.includes(pageNumber);
 
              return (
                 <div
                   key={`page_${pageNumber}_${index}`}
                   className={`relative transition-all rounded-lg overflow-hidden border-4 bg-white shadow-sm flex flex-col ${
-                    isSelected
+                    isSelected && mode !== 'reorder'
                       ? 'border-red-500 scale-105 shadow-md'
-                      : mode === 'reorder'
+                      : isSelected && mode === 'reorder'
                       ? 'border-blue-500 scale-105 shadow-md'
+                      : mode === 'reorder'
+                      ? 'border-gray-300 hover:border-blue-300 scale-100 shadow-sm'
                       : 'border-transparent hover:scale-105'
-                  } ${mode === 'reorder' ? 'cursor-move' : 'cursor-pointer'}`}
+                  } ${mode === 'reorder' ? 'cursor-pointer' : 'cursor-pointer'}`}
                   onClick={() => handleSelect(pageNumber)}
                   draggable={mode === 'reorder'}
                   onDragStart={(e) => handleDragStart(e, index)}
@@ -168,9 +232,18 @@ export default function PdfPreview({ file, selectedPages, onSelect, mode }) {
                     renderAnnotationLayer={false}
                   />
                   {mode === 'reorder' && (
-                      <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow">
-                          {index + 1}
-                      </div>
+                      <>
+                          <div className={`absolute top-2 left-2 ${isSelected ? 'bg-blue-500' : 'bg-gray-400'} text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow`}>
+                              {index + 1}
+                          </div>
+                          {isSelected && (
+                              <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow">
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                              </div>
+                          )}
+                      </>
                   )}
                   {mode !== 'reorder' && isSelected && (
                       <div className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow">
