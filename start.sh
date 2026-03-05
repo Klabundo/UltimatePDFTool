@@ -3,11 +3,16 @@
 # Exit on error
 set -e
 
+echo "Setting up Python Virtual Environment..."
+if [ ! -d ".venv" ]; then
+    python3 -m venv .venv
+fi
+
 echo "Installing Backend Dependencies..."
-pip3 install -r requirements.txt || pip install -r requirements.txt
+.venv/bin/pip install -r requirements.txt
 
 echo "Starting Python API Backend in the background..."
-python3 server.py &
+.venv/bin/python server.py &
 API_PID=$!
 
 echo "Installing Frontend Dependencies..."
