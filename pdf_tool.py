@@ -98,6 +98,111 @@ def rotate(args):
     except Exception as e:
         raise RuntimeError(f"Error during rotate: {e}")
 
+def compress(args):
+    print(f"Compressing {args.input}...")
+    try:
+        reader = PdfReader(args.input)
+        writer = PdfWriter()
+
+        for page in reader.pages:
+            writer.add_page(page)
+
+        writer.add_metadata(reader.metadata)
+
+        for page in writer.pages:
+            page.compress_content_streams()
+
+        with open(args.output, "wb") as f_out:
+            writer.write(f_out)
+        print(f"Successfully compressed and saved to {args.output}")
+    except Exception as e:
+        raise RuntimeError(f"Error during compress: {e}")
+
+def protect(args):
+    print(f"Protecting {args.input} with password...")
+    try:
+        reader = PdfReader(args.input)
+        writer = PdfWriter()
+
+        for page in reader.pages:
+            writer.add_page(page)
+
+        writer.encrypt(args.password)
+
+        with open(args.output, "wb") as f_out:
+            writer.write(f_out)
+        print(f"Successfully protected and saved to {args.output}")
+    except Exception as e:
+        raise RuntimeError(f"Error during protect: {e}")
+
+def unlock(args):
+    print(f"Unlocking {args.input}...")
+    try:
+        reader = PdfReader(args.input)
+        if reader.is_encrypted:
+            reader.decrypt(args.password)
+        else:
+            print("Warning: The file is not encrypted. Proceeding as copy.")
+
+        writer = PdfWriter()
+        for page in reader.pages:
+            writer.add_page(page)
+
+        with open(args.output, "wb") as f_out:
+            writer.write(f_out)
+        print(f"Successfully unlocked and saved to {args.output}")
+    except Exception as e:
+        raise RuntimeError(f"Error during unlock: {e}")
+
+def extract(args):
+    try:
+        pages_to_extract = [int(p) - 1 for p in args.pages]
+    except ValueError:
+        raise ValueError("Error: Page numbers must be integers.")
+
+    print(f"Extracting {len(pages_to_extract)} pages from {args.input}...")
+    try:
+        reader = PdfReader(args.input)
+        writer = PdfWriter()
+        num_pages = len(reader.pages)
+
+        for p in pages_to_extract:
+            if 0 <= p < num_pages:
+                writer.add_page(reader.pages[p])
+            else:
+                print(f"Warning: Page {p+1} is out of bounds and will be skipped.")
+
+        with open(args.output, "wb") as f_out:
+            writer.write(f_out)
+        print(f"Successfully extracted pages and saved to {args.output}")
+    except Exception as e:
+        raise RuntimeError(f"Error during extract: {e}")
+
+def metadata(args):
+    print(f"Updating metadata for {args.input}...")
+    try:
+        reader = PdfReader(args.input)
+        writer = PdfWriter()
+
+        for page in reader.pages:
+            writer.add_page(page)
+
+        meta = reader.metadata or {}
+        new_meta = {k: v for k, v in meta.items()}
+
+        if args.title is not None:
+            new_meta["/Title"] = args.title
+        if args.author is not None:
+            new_meta["/Author"] = args.author
+
+        writer.add_metadata(new_meta)
+
+        with open(args.output, "wb") as f_out:
+            writer.write(f_out)
+        print(f"Successfully updated metadata and saved to {args.output}")
+    except Exception as e:
+        raise RuntimeError(f"Error during metadata update: {e}")
+
 def deskew(args):
     try:
         if "all" in args.pages:
@@ -221,6 +326,41 @@ def main():
     parser_deskew.add_argument("-o", "--output", required=True, help="Output PDF file.")
     parser_deskew.add_argument("-p", "--pages", nargs='+', required=True, help="List of 1-based page numbers to deskew. Use 'all' for all pages.")
     parser_deskew.set_defaults(func=deskew)
+
+    # Compress subcommand
+    parser_compress = subparsers.add_parser("compress", help="Compress PDF content streams.")
+    parser_compress.add_argument("-i", "--input", required=True, help="Input PDF file.")
+    parser_compress.add_argument("-o", "--output", required=True, help="Output PDF file.")
+    parser_compress.set_defaults(func=compress)
+
+    # Protect subcommand
+    parser_protect = subparsers.add_parser("protect", help="Encrypt PDF with a password.")
+    parser_protect.add_argument("-i", "--input", required=True, help="Input PDF file.")
+    parser_protect.add_argument("-o", "--output", required=True, help="Output PDF file.")
+    parser_protect.add_argument("-pw", "--password", required=True, help="Password for encryption.")
+    parser_protect.set_defaults(func=protect)
+
+    # Unlock subcommand
+    parser_unlock = subparsers.add_parser("unlock", help="Decrypt a password-protected PDF.")
+    parser_unlock.add_argument("-i", "--input", required=True, help="Input PDF file.")
+    parser_unlock.add_argument("-o", "--output", required=True, help="Output PDF file.")
+    parser_unlock.add_argument("-pw", "--password", required=True, help="Password for decryption.")
+    parser_unlock.set_defaults(func=unlock)
+
+    # Extract subcommand
+    parser_extract = subparsers.add_parser("extract", help="Extract specific pages into a new PDF.")
+    parser_extract.add_argument("-i", "--input", required=True, help="Input PDF file.")
+    parser_extract.add_argument("-o", "--output", required=True, help="Output PDF file.")
+    parser_extract.add_argument("-p", "--pages", nargs='+', required=True, help="List of 1-based page numbers to extract.")
+    parser_extract.set_defaults(func=extract)
+
+    # Metadata subcommand
+    parser_metadata = subparsers.add_parser("metadata", help="Update PDF metadata.")
+    parser_metadata.add_argument("-i", "--input", required=True, help="Input PDF file.")
+    parser_metadata.add_argument("-o", "--output", required=True, help="Output PDF file.")
+    parser_metadata.add_argument("-t", "--title", help="New title.")
+    parser_metadata.add_argument("-a", "--author", help="New author.")
+    parser_metadata.set_defaults(func=metadata)
 
     args = parser.parse_args()
     try:

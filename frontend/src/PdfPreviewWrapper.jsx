@@ -169,18 +169,18 @@ export default function PdfPreview({ file, selectedPages, onSelect, mode }) {
   return (
     <div className="mt-4 w-full">
       <div className="flex justify-between items-center mb-2">
-        <h4 className="text-sm font-medium text-gray-700">Preview & Select Pages</h4>
+        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Preview & Select Pages</h4>
         {numPages && mode !== 'reorder' && (
             <div className="space-x-2">
                 <button
                   onClick={() => onSelect(Array.from({length: numPages}, (_, i) => i + 1))}
-                  className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded transition-colors cursor-pointer"
+                  className="text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-2 py-1 rounded transition-colors cursor-pointer"
                 >
                   Select All
                 </button>
                 <button
                   onClick={() => onSelect([])}
-                  className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded transition-colors cursor-pointer"
+                  className="text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-2 py-1 rounded transition-colors cursor-pointer"
                 >
                   Clear All
                 </button>
@@ -190,19 +190,19 @@ export default function PdfPreview({ file, selectedPages, onSelect, mode }) {
             <div className="space-x-2">
                 <button
                   onClick={() => setSelectedReorderPages([])}
-                  className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded transition-colors cursor-pointer"
+                  className="text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-2 py-1 rounded transition-colors cursor-pointer"
                 >
                   Clear Selection
                 </button>
             </div>
         )}
       </div>
-      <div className="bg-gray-100 p-4 rounded-lg overflow-auto max-h-96">
+      <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-auto max-h-96">
         <Document
           file={fileUrl}
           onLoadSuccess={onDocumentLoadSuccess}
           className="flex flex-wrap gap-4"
-          loading={<div className="text-sm text-gray-500">Loading PDF preview...</div>}
+          loading={<div className="text-sm text-gray-500 dark:text-gray-400">Loading PDF preview...</div>}
         >
           {renderPages.map((pageNumber, index) => {
              const isSelected = mode === 'reorder' ? selectedReorderPages.includes(pageNumber) : selectedPages.includes(pageNumber);
@@ -210,14 +210,14 @@ export default function PdfPreview({ file, selectedPages, onSelect, mode }) {
              return (
                 <div
                   key={`page_${pageNumber}_${index}`}
-                  className={`relative transition-all rounded-lg overflow-hidden border-4 bg-white shadow-sm flex flex-col ${
+                  className={`relative transition-all rounded-lg overflow-hidden border-4 bg-white dark:bg-gray-700 shadow-sm flex flex-col ${
                     isSelected && mode !== 'reorder'
                       ? 'border-red-500 scale-105 shadow-md'
                       : isSelected && mode === 'reorder'
                       ? 'border-blue-500 scale-105 shadow-md'
                       : mode === 'reorder'
-                      ? 'border-gray-300 hover:border-blue-300 scale-100 shadow-sm'
-                      : 'border-transparent hover:scale-105'
+                      ? 'border-gray-300 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 scale-100 shadow-sm'
+                      : 'border-transparent dark:border-gray-800 hover:scale-105'
                   } ${mode === 'reorder' ? 'cursor-pointer' : 'cursor-pointer'}`}
                   onClick={() => handleSelect(pageNumber)}
                   draggable={mode === 'reorder'}
@@ -230,10 +230,11 @@ export default function PdfPreview({ file, selectedPages, onSelect, mode }) {
                     width={150}
                     renderTextLayer={false}
                     renderAnnotationLayer={false}
+                    className="dark:invert dark:hue-rotate-180"
                   />
                   {mode === 'reorder' && (
                       <>
-                          <div className={`absolute top-2 left-2 ${isSelected ? 'bg-blue-500' : 'bg-gray-400'} text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow`}>
+                          <div className={`absolute top-2 left-2 ${isSelected ? 'bg-blue-500' : 'bg-gray-400 dark:bg-gray-600'} text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow`}>
                               {index + 1}
                           </div>
                           {isSelected && (
@@ -252,9 +253,9 @@ export default function PdfPreview({ file, selectedPages, onSelect, mode }) {
                           </svg>
                       </div>
                   )}
-                  <div className="bg-white text-center text-xs py-1 font-medium text-gray-600 border-t mt-auto w-full flex items-center justify-center gap-1">
+                  <div className="bg-white dark:bg-gray-800 text-center text-xs py-1 font-medium text-gray-600 dark:text-gray-300 border-t dark:border-gray-700 mt-auto w-full flex items-center justify-center gap-1">
                     {mode === 'reorder' && (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-400 dark:text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                            <circle cx="9" cy="12" r="1"></circle>
                            <circle cx="9" cy="5" r="1"></circle>
                            <circle cx="9" cy="19" r="1"></circle>
@@ -271,7 +272,7 @@ export default function PdfPreview({ file, selectedPages, onSelect, mode }) {
         </Document>
       </div>
       {mode === 'reorder' && selectedPages.length > 0 && (
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
             New order: {selectedPages.join(', ')}
           </p>
       )}

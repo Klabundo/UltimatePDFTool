@@ -8,7 +8,7 @@ import shutil
 import zipfile
 
 # Import underlying logic from our CLI tool
-from pdf_tool import merge, split, delete, rotate, reorder, deskew
+from pdf_tool import merge, split, delete, rotate, reorder, deskew, compress, protect, unlock, extract, metadata
 
 app = FastAPI(title="Ultimate PDF Tool API")
 
@@ -185,6 +185,122 @@ async def api_deskew(
         deskew(args)
 
         return FileResponse(output_path, media_type="application/pdf", filename="deskewed_output.pdf")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/compress")
+async def api_compress(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...)
+):
+    temp_dir = tempfile.mkdtemp()
+    background_tasks.add_task(cleanup_temp_dir, temp_dir)
+
+    try:
+        input_path = os.path.join(temp_dir, file.filename)
+        with open(input_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        output_path = os.path.join(temp_dir, "compressed_output.pdf")
+
+        args = MockArgs(input=input_path, output=output_path)
+        compress(args)
+
+        return FileResponse(output_path, media_type="application/pdf", filename="compressed_output.pdf")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/protect")
+async def api_protect(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    password: str = Form(...)
+):
+    temp_dir = tempfile.mkdtemp()
+    background_tasks.add_task(cleanup_temp_dir, temp_dir)
+
+    try:
+        input_path = os.path.join(temp_dir, file.filename)
+        with open(input_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        output_path = os.path.join(temp_dir, "protected_output.pdf")
+
+        args = MockArgs(input=input_path, output=output_path, password=password)
+        protect(args)
+
+        return FileResponse(output_path, media_type="application/pdf", filename="protected_output.pdf")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/unlock")
+async def api_unlock(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    password: str = Form(...)
+):
+    temp_dir = tempfile.mkdtemp()
+    background_tasks.add_task(cleanup_temp_dir, temp_dir)
+
+    try:
+        input_path = os.path.join(temp_dir, file.filename)
+        with open(input_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        output_path = os.path.join(temp_dir, "unlocked_output.pdf")
+
+        args = MockArgs(input=input_path, output=output_path, password=password)
+        unlock(args)
+
+        return FileResponse(output_path, media_type="application/pdf", filename="unlocked_output.pdf")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/extract")
+async def api_extract(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    pages: str = Form(...) # Space separated e.g. "1 3"
+):
+    temp_dir = tempfile.mkdtemp()
+    background_tasks.add_task(cleanup_temp_dir, temp_dir)
+
+    try:
+        input_path = os.path.join(temp_dir, file.filename)
+        with open(input_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        output_path = os.path.join(temp_dir, "extracted_output.pdf")
+        pages_list = pages.strip().split()
+
+        args = MockArgs(input=input_path, output=output_path, pages=pages_list)
+        extract(args)
+
+        return FileResponse(output_path, media_type="application/pdf", filename="extracted_output.pdf")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/metadata")
+async def api_metadata(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    title: Optional[str] = Form(None),
+    author: Optional[str] = Form(None)
+):
+    temp_dir = tempfile.mkdtemp()
+    background_tasks.add_task(cleanup_temp_dir, temp_dir)
+
+    try:
+        input_path = os.path.join(temp_dir, file.filename)
+        with open(input_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        output_path = os.path.join(temp_dir, "metadata_output.pdf")
+
+        args = MockArgs(input=input_path, output=output_path, title=title, author=author)
+        metadata(args)
+
+        return FileResponse(output_path, media_type="application/pdf", filename="metadata_output.pdf")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
