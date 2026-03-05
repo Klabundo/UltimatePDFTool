@@ -14,14 +14,15 @@ echo "Installing Frontend Dependencies..."
 cd frontend
 npm install
 
-echo "Starting React Frontend..."
-npm run dev &
+echo "Starting React Frontend on local network..."
+npm run dev -- --host &
 FRONTEND_PID=$!
 
 echo ""
 echo "=========================================="
-echo "Backend running on http://localhost:8000"
-echo "Frontend starting up..."
+echo "Backend running on http://0.0.0.0:8000"
+echo "Frontend starting up on local network (exposed)..."
+echo "Check terminal output for local IP address."
 echo "Press Ctrl+C to stop both servers."
 echo "=========================================="
 
