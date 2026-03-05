@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Layers, FileOutput, Scissors, RotateCw, ListOrdered, FileUp, X, CheckCircle, FileText, Loader2, Download, Scan } from 'lucide-react';
-import { Layers, FileOutput, Scissors, RotateCw, ListOrdered, FileUp, X, CheckCircle, FileText, Loader2, Download, GripVertical } from 'lucide-react';
+import { Layers, FileOutput, Scissors, RotateCw, ListOrdered, FileUp, X, CheckCircle, FileText, Loader2, Download, Scan, GripVertical } from 'lucide-react';
 import axios from 'axios';
 import PdfPreviewWrapper from './PdfPreviewWrapper';
 import FileThumbnail from './FileThumbnail';
@@ -316,8 +315,6 @@ export default function App() {
                     <div className="mb-8">
                         {activeTab === 'split' && (
                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Preview</label>
-                              <PdfPreviewWrapper file={files[0]} selectedPages={[]} onSelect={() => {}} mode="split" />
                               <label className="block text-sm font-medium text-gray-700 mb-1">Pages to Split (Leave empty to split all pages)</label>
                               <PdfPreviewWrapper file={files[0]} selectedPages={splitPages} onSelect={setSplitPages} mode="split" />
                            </div>
@@ -346,7 +343,6 @@ export default function App() {
                         )}
                         {activeTab === 'reorder' && (
                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">New Order (Drag pages to reorder)</label>
                               <label className="block text-sm font-medium text-gray-700 mb-1">New Order (Drag and drop pages to reorder)</label>
                               <PdfPreviewWrapper file={files[0]} selectedPages={reorderPages} onSelect={setReorderPages} mode="reorder" />
                            </div>
