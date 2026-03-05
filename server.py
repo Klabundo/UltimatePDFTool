@@ -8,7 +8,7 @@ import shutil
 import zipfile
 
 # Import underlying logic from our CLI tool
-from pdf_tool import merge, split, delete, rotate, reorder, deskew, compress, protect, unlock, extract, metadata
+from pdf_tool import merge, split, delete, rotate, reorder, deskew, compress, protect, unlock, extract, metadata, images_to_pdf, pdf_to_images, extract_text, watermark, crop, auto_rotate
 
 app = FastAPI(title="Ultimate PDF Tool API")
 
@@ -303,6 +303,175 @@ async def api_metadata(
         return FileResponse(output_path, media_type="application/pdf", filename="metadata_output.pdf")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/auto_rotate")
+async def api_auto_rotate(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...)
+):
+    temp_dir = tempfile.mkdtemp()
+    background_tasks.add_task(cleanup_temp_dir, temp_dir)
+
+    try:
+        input_path = os.path.join(temp_dir, file.filename)
+        with open(input_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        output_path = os.path.join(temp_dir, "auto_rotated_output.pdf")
+
+        args = MockArgs(input=input_path, output=output_path)
+        auto_rotate(args)
+
+        return FileResponse(output_path, media_type="application/pdf", filename="auto_rotated_output.pdf")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/images_to_pdf")
+async def api_images_to_pdf(background_tasks: BackgroundTasks, files: List[UploadFile] = File(...)):
+    if not files or len(files) < 1:
+        raise HTTPException(status_code=400, detail="At least 1 image file is required.")
+
+    temp_dir = tempfile.mkdtemp()
+    background_tasks.add_task(cleanup_temp_dir, temp_dir)
+
+    input_paths = []
+    try:
+        for file in files:
+            file_path = os.path.join(temp_dir, file.filename)
+            with open(file_path, "wb") as f:
+                shutil.copyfileobj(file.file, f)
+            input_paths.append(file_path)
+
+        output_path = os.path.join(temp_dir, "images_output.pdf")
+        args = MockArgs(inputs=input_paths, output=output_path)
+
+        images_to_pdf(args)
+
+        return FileResponse(output_path, media_type="application/pdf", filename="images_output.pdf")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/pdf_to_images")
+async def api_pdf_to_images(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...)
+):
+    temp_dir = tempfile.mkdtemp()
+    background_tasks.add_task(cleanup_temp_dir, temp_dir)
+
+    try:
+        input_path = os.path.join(temp_dir, file.filename)
+        with open(input_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        output_dir = os.path.join(temp_dir, "images")
+        args = MockArgs(input=input_path, output_dir=output_dir)
+
+        pdf_to_images(args)
+
+        zip_path = os.path.join(temp_dir, "extracted_images.zip")
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, _, files in os.walk(output_dir):
+                for f in files:
+                    zipf.write(os.path.join(root, f), f)
+
+        return FileResponse(zip_path, media_type="application/zip", filename="extracted_images.zip")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/extract_text")
+async def api_extract_text(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...)
+):
+    temp_dir = tempfile.mkdtemp()
+    background_tasks.add_task(cleanup_temp_dir, temp_dir)
+
+    try:
+        input_path = os.path.join(temp_dir, file.filename)
+        with open(input_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        output_path = os.path.join(temp_dir, "extracted_text.txt")
+        args = MockArgs(input=input_path, output=output_path)
+
+        extract_text(args)
+
+        return FileResponse(output_path, media_type="text/plain", filename="extracted_text.txt")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/watermark")
+async def api_watermark(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    text: str = Form(...)
+):
+    temp_dir = tempfile.mkdtemp()
+    background_tasks.add_task(cleanup_temp_dir, temp_dir)
+
+    try:
+        input_path = os.path.join(temp_dir, file.filename)
+        with open(input_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        output_path = os.path.join(temp_dir, "watermark_output.pdf")
+
+        args = MockArgs(input=input_path, output=output_path, text=text)
+        watermark(args)
+
+        return FileResponse(output_path, media_type="application/pdf", filename="watermark_output.pdf")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/crop")
+async def api_crop(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    left: float = Form(0),
+    right: float = Form(0),
+    top: float = Form(0),
+    bottom: float = Form(0)
+):
+    temp_dir = tempfile.mkdtemp()
+    background_tasks.add_task(cleanup_temp_dir, temp_dir)
+
+    try:
+        input_path = os.path.join(temp_dir, file.filename)
+        with open(input_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        output_path = os.path.join(temp_dir, "cropped_output.pdf")
+
+        args = MockArgs(input=input_path, output=output_path, left=left, right=right, top=top, bottom=bottom)
+        crop(args)
+
+        return FileResponse(output_path, media_type="application/pdf", filename="cropped_output.pdf")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/auto_rotate")
+async def api_auto_rotate(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...)
+):
+    temp_dir = tempfile.mkdtemp()
+    background_tasks.add_task(cleanup_temp_dir, temp_dir)
+
+    try:
+        input_path = os.path.join(temp_dir, file.filename)
+        with open(input_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        output_path = os.path.join(temp_dir, "auto_rotated_output.pdf")
+
+        args = MockArgs(input=input_path, output=output_path)
+        auto_rotate(args)
+
+        return FileResponse(output_path, media_type="application/pdf", filename="auto_rotated_output.pdf")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     import uvicorn

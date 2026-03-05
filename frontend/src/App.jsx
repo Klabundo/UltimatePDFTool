@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Layers, FileOutput, Scissors, RotateCw, ListOrdered, FileUp, X, CheckCircle, FileText, Loader2, Download, Scan, GripVertical, Minimize, Lock, Unlock, FilePlus, Tag, Moon, Sun } from 'lucide-react';
+import { Layers, FileOutput, Scissors, RotateCw, ListOrdered, FileUp, X, CheckCircle, FileText, Loader2, Download, Scan, GripVertical, Minimize, Lock, Unlock, FilePlus, Tag, Moon, Sun, ImagePlus, Images, Droplets, Crop, RefreshCcw } from 'lucide-react';
 import axios from 'axios';
 import PdfPreviewWrapper from './PdfPreviewWrapper';
 import FileThumbnail from './FileThumbnail';
@@ -27,6 +27,8 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [metaTitle, setMetaTitle] = useState('');
   const [metaAuthor, setMetaAuthor] = useState('');
+  const [watermarkText, setWatermarkText] = useState('');
+  const [cropMargins, setCropMargins] = useState({ left: 0, right: 0, top: 0, bottom: 0 });
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('darkMode') === 'true';
@@ -46,6 +48,12 @@ export default function App() {
     { id: 'unlock', label: 'Unlock PDF', icon: Unlock },
     { id: 'extract', label: 'Extract Pages', icon: FilePlus },
     { id: 'metadata', label: 'Edit Metadata', icon: Tag },
+    { id: 'images_to_pdf', label: 'Images to PDF', icon: ImagePlus },
+    { id: 'pdf_to_images', label: 'PDF to Images', icon: Images },
+    { id: 'extract_text', label: 'Extract Text', icon: FileText },
+    { id: 'watermark', label: 'Add Watermark', icon: Droplets },
+    { id: 'crop', label: 'Crop PDF', icon: Crop },
+    { id: 'auto_rotate', label: 'Auto Rotate', icon: RefreshCcw },
   ];
 
   useEffect(() => {
@@ -71,13 +79,15 @@ export default function App() {
     setPassword('');
     setMetaTitle('');
     setMetaAuthor('');
+    setWatermarkText('');
+    setCropMargins({ left: 0, right: 0, top: 0, bottom: 0 });
   }, [activeTab]);
 
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
     if (selectedFiles.length > 0) {
-       // Merge can take multiple, others take single
-      if (activeTab === 'merge') {
+       // Merge and images_to_pdf can take multiple, others take single
+      if (activeTab === 'merge' || activeTab === 'images_to_pdf') {
           setFiles(prev => [...prev, ...selectedFiles]);
       } else {
           setFiles([selectedFiles[0]]);
@@ -87,9 +97,16 @@ export default function App() {
 
   const handleDrop = (e) => {
     e.preventDefault();
-    const droppedFiles = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf');
+
+    let droppedFiles = [];
+    if (activeTab === 'images_to_pdf') {
+       droppedFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    } else {
+       droppedFiles = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf');
+    }
+
     if (droppedFiles.length > 0) {
-      if (activeTab === 'merge') {
+      if (activeTab === 'merge' || activeTab === 'images_to_pdf') {
           setFiles(prev => [...prev, ...droppedFiles]);
       } else {
           setFiles([droppedFiles[0]]);
@@ -102,17 +119,17 @@ export default function App() {
   };
 
   const handleDragStartFile = (e, index) => {
-    if (activeTab !== 'merge') return;
+    if (activeTab !== 'merge' && activeTab !== 'images_to_pdf') return;
     e.dataTransfer.setData('text/plain', index);
   };
 
   const handleDragOverFile = (e) => {
-    if (activeTab !== 'merge') return;
+    if (activeTab !== 'merge' && activeTab !== 'images_to_pdf') return;
     e.preventDefault();
   };
 
   const handleDropFile = (e, targetIndex) => {
-    if (activeTab !== 'merge') return;
+    if (activeTab !== 'merge' && activeTab !== 'images_to_pdf') return;
     e.preventDefault();
     const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
     if (draggedIndex === targetIndex) return;
@@ -136,8 +153,8 @@ export default function App() {
 
     const formData = new FormData();
 
-    if (activeTab === 'merge') {
-      if (files.length < 2) {
+    if (activeTab === 'merge' || activeTab === 'images_to_pdf') {
+      if (activeTab === 'merge' && files.length < 2) {
         setError("Merge requires at least 2 PDF files.");
         setLoading(false);
         return;
@@ -177,6 +194,14 @@ export default function App() {
       } else if (activeTab === 'metadata') {
         if (metaTitle) formData.append('title', metaTitle);
         if (metaAuthor) formData.append('author', metaAuthor);
+      } else if (activeTab === 'watermark') {
+        if (!watermarkText) throw new Error("Please provide watermark text.");
+        formData.append('text', watermarkText);
+      } else if (activeTab === 'crop') {
+        formData.append('left', cropMargins.left);
+        formData.append('right', cropMargins.right);
+        formData.append('top', cropMargins.top);
+        formData.append('bottom', cropMargins.bottom);
       }
 
       const response = await axios.post(endpoint, formData, {
@@ -191,6 +216,9 @@ export default function App() {
       const contentDisposition = response.headers['content-disposition'];
       let filename = `${activeTab}_result.pdf`;
       if (activeTab === 'split') filename = 'split_pages.zip';
+      if (activeTab === 'pdf_to_images') filename = 'extracted_images.zip';
+      if (activeTab === 'extract_text') filename = 'extracted_text.txt';
+
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
         if (filenameMatch && filenameMatch.length === 2) {
@@ -287,6 +315,12 @@ export default function App() {
                 {activeTab === 'unlock' && 'Remove password protection from your PDF.'}
                 {activeTab === 'extract' && 'Select specific pages to save as a new single PDF.'}
                 {activeTab === 'metadata' && 'Update the Title and Author of your PDF document.'}
+                {activeTab === 'images_to_pdf' && 'Convert multiple images into a single PDF document.'}
+                {activeTab === 'pdf_to_images' && 'Convert each page of your PDF into high-quality images (downloaded as a ZIP).'}
+                {activeTab === 'extract_text' && 'Extract all readable text from your PDF into a simple .txt file.'}
+                {activeTab === 'watermark' && 'Add a text watermark overlay to all pages of your PDF document.'}
+                {activeTab === 'crop' && 'Crop margins from the edges of your PDF pages.'}
+                {activeTab === 'auto_rotate' && 'Automatically rotate upside-down or sideways pages based on text orientation.'}
               </p>
 
               {/* File Upload Area */}
@@ -298,25 +332,27 @@ export default function App() {
                     className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-12 flex flex-col items-center justify-center text-center bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer flex-1"
                   >
                     <FileUp className="h-12 w-12 text-blue-500 mb-4" />
-                    <p className="text-lg font-medium text-gray-900 dark:text-white mb-1">Drag & drop your PDF{activeTab === 'merge' ? 's' : ''} here</p>
+                    <p className="text-lg font-medium text-gray-900 dark:text-white mb-1">
+                      Drag & drop your {activeTab === 'images_to_pdf' ? 'Images' : 'PDF'}{activeTab === 'merge' ? 's' : ''} here
+                    </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">or click to browse files</p>
                     <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-medium transition-colors shadow-sm pointer-events-none">
-                      Select PDF{activeTab === 'merge' ? ' Files' : ' File'}
+                      Select {activeTab === 'images_to_pdf' ? 'Images' : 'PDF'}{activeTab === 'merge' ? ' Files' : activeTab !== 'images_to_pdf' ? ' File' : ''}
                     </button>
                     <input
                       type="file"
                       className="hidden"
                       ref={fileInputRef}
                       onChange={handleFileChange}
-                      accept=".pdf"
-                      multiple={activeTab === 'merge'}
+                      accept={activeTab === 'images_to_pdf' ? "image/*" : ".pdf"}
+                      multiple={activeTab === 'merge' || activeTab === 'images_to_pdf'}
                     />
                   </div>
               ) : (
                 <div className="flex-1 flex flex-col">
                     <div className="mb-6 flex justify-between items-center">
                         <h3 className="font-semibold text-gray-700 dark:text-gray-300">Selected File{files.length > 1 ? 's' : ''}</h3>
-                        {activeTab === 'merge' && (
+                        {(activeTab === 'merge' || activeTab === 'images_to_pdf') && (
                             <button
                               onClick={() => fileInputRef.current?.click()}
                               className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
@@ -329,8 +365,8 @@ export default function App() {
                           className="hidden"
                           ref={fileInputRef}
                           onChange={handleFileChange}
-                          accept=".pdf"
-                          multiple={activeTab === 'merge'}
+                          accept={activeTab === 'images_to_pdf' ? "image/*" : ".pdf"}
+                          multiple={activeTab === 'merge' || activeTab === 'images_to_pdf'}
                         />
                     </div>
 
@@ -338,15 +374,23 @@ export default function App() {
                         {files.map((file, idx) => (
                             <div
                               key={idx}
-                              draggable={activeTab === 'merge'}
+                              draggable={activeTab === 'merge' || activeTab === 'images_to_pdf'}
                               onDragStart={(e) => handleDragStartFile(e, idx)}
                               onDragOver={handleDragOverFile}
                               onDrop={(e) => handleDropFile(e, idx)}
-                              className={`flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 shadow-sm transition-shadow hover:shadow-md ${activeTab === 'merge' ? 'cursor-move' : ''}`}
+                              className={`flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 shadow-sm transition-shadow hover:shadow-md ${activeTab === 'merge' || activeTab === 'images_to_pdf' ? 'cursor-move' : ''}`}
                             >
                                 <div className="flex items-center gap-4 overflow-hidden">
-                                    {activeTab === 'merge' && <GripVertical className="h-5 w-5 text-gray-400 dark:text-gray-500 shrink-0" />}
-                                    <FileThumbnail file={file} />
+                                    {(activeTab === 'merge' || activeTab === 'images_to_pdf') && <GripVertical className="h-5 w-5 text-gray-400 dark:text-gray-500 shrink-0" />}
+
+                                    {activeTab === 'images_to_pdf' ? (
+                                        <div className="w-12 h-16 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden flex items-center justify-center border border-gray-200 dark:border-gray-600">
+                                            <img src={URL.createObjectURL(file)} alt="preview" className="object-cover w-full h-full" />
+                                        </div>
+                                    ) : (
+                                        <FileThumbnail file={file} />
+                                    )}
+
                                     <div className="flex flex-col">
                                       <span className="truncate text-sm font-medium text-gray-700 dark:text-gray-200">{file.name}</span>
                                       <span className="text-xs text-gray-400 dark:text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
@@ -443,6 +487,41 @@ export default function App() {
                               </div>
                            </div>
                         )}
+                        {activeTab === 'watermark' && (
+                           <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Watermark Text</label>
+                              <input
+                                type="text"
+                                value={watermarkText}
+                                onChange={e => setWatermarkText(e.target.value)}
+                                placeholder="e.g. CONFIDENTIAL"
+                                className="w-full max-w-sm border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white dark:bg-gray-800 dark:text-white"
+                              />
+                           </div>
+                        )}
+                        {activeTab === 'crop' && (
+                           <div className="space-y-4">
+                              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Margins to crop (in points)</p>
+                              <div className="grid grid-cols-2 gap-4 max-w-md">
+                                <div>
+                                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Top</label>
+                                  <input type="number" min="0" value={cropMargins.top} onChange={e => setCropMargins({...cropMargins, top: Number(e.target.value)})} className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-gray-800 dark:text-white" />
+                                </div>
+                                <div>
+                                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Bottom</label>
+                                  <input type="number" min="0" value={cropMargins.bottom} onChange={e => setCropMargins({...cropMargins, bottom: Number(e.target.value)})} className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-gray-800 dark:text-white" />
+                                </div>
+                                <div>
+                                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Left</label>
+                                  <input type="number" min="0" value={cropMargins.left} onChange={e => setCropMargins({...cropMargins, left: Number(e.target.value)})} className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-gray-800 dark:text-white" />
+                                </div>
+                                <div>
+                                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Right</label>
+                                  <input type="number" min="0" value={cropMargins.right} onChange={e => setCropMargins({...cropMargins, right: Number(e.target.value)})} className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-gray-800 dark:text-white" />
+                                </div>
+                              </div>
+                           </div>
+                        )}
                     </div>
 
                     {error && (
@@ -472,7 +551,7 @@ export default function App() {
                                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 dark:disabled:bg-blue-800 text-white px-8 py-3 rounded-lg font-medium transition-colors shadow-sm"
                             >
                                 {loading && <Loader2 className="h-5 w-5 animate-spin" />}
-                                {loading ? (activeTab === 'deskew' ? 'Processing... (This may take a while)' : 'Processing...') : `Process PDF${activeTab === 'merge' ? 's' : ''}`}
+                                {loading ? (activeTab === 'deskew' ? 'Processing... (This may take a while)' : 'Processing...') : `Process ${activeTab === 'images_to_pdf' ? 'Images' : 'PDF'}${activeTab === 'merge' ? 's' : ''}`}
                             </button>
                         </div>
                     )}
