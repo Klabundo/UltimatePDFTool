@@ -19,7 +19,12 @@ Dieses Tool verfügt über ein modernes Web-Frontend (mit React gebaut) und ein 
 2. Klicke doppelt auf die Start-Datei für dein Betriebssystem (diese installiert automatisch fehlende Abhängigkeiten und öffnet die Server):
    - **Windows:** Führe `start.bat` aus (z.B. per Doppelklick).
    - **Linux/macOS:** Führe `./start.sh` im Terminal aus.
+3. **Alternativ (Docker):** Du kannst die gesamte Anwendung (Backend und Frontend) mit Docker ausführen:
+   ```bash
+   docker compose up --build
+   ```
+   *Voraussetzung: Docker und Docker Compose müssen auf deinem System installiert sein.*
 
-Sobald die Skripte laufen, öffnet sich dein Webbrowser mit der React-Benutzeroberfläche (standardmäßig unter `http://localhost:5173`), während die API im Hintergrund auf Port `8000` läuft.
+Sobald die Skripte oder Docker laufen, öffnet sich dein Webbrowser mit der React-Benutzeroberfläche (standardmäßig unter `http://localhost:5173`), während die API im Hintergrund auf Port `8000` läuft.
 
 Für Details zur CLI und zur alten Desktop-App siehe [docs/README.md](docs/README.md).
